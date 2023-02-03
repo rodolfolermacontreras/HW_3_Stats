@@ -1,0 +1,129 @@
+---
+title: "HW3"
+author: "Team_9"
+date: "2023-02-02"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Homework 3
+
+## Team 9:
+
+-   Charlie Madison
+-   Hrishi Mysore Harishkumar
+-   Michelle Li
+-   Qizhuang Huang
+-   Shaun Pfister
+-   Rodolfo Lerma
+
+## Description
+
+The data in the germ dataset of the GLMsData library contains
+information experiments where the number of seed germinations were
+recorded for two extracts: beans and cucumbers. The dataset contains the
+following columns:
+
+-   **Germ:** the number of seeds that germinated in a particular experiment.
+-   **Total:** the number of seeds planted in a particular experiment.
+-   **Extract:** the extract type (Bean or Cucumber) for the experiment.
+-   **Seeds:** the type of seed (0A75 or 0A73) for the experiment.
+
+## Question 1:
+
+**Load the germ data in R and fit a logistic regression model for the proportion of seeds that germinated `Germ` / `Total` onto the predictors `Extract` and `Seeds`. Include the interaction for `Extract` and `Seeds`.**
+
+## Question 2:
+
+**Produce appropriate diagnostics plot for this logistic regression model and comment on whether you see any indications that the model may not fit the data well.**
+
+## Question 3:
+
+**Evaluate the model by means of the deviance goodness of fit test. Does the result of the test indicate potential problems with the model? Explain.**
+
+## Question 4:
+
+**Sometimes, when the diagnostics of a GLM look overall good but the goodness of fit test indicates potential problems, it is possible that the data exhibit over dispersion (see chapter 9.8 of GLM). This means that the overall variability of the data is larger than what is prescribed by the model. In the case of logistic regression, the variance of the binomial counts Yi \~ Binomial(mi; ui) is expected to be V(Yi) = mi x ui(1 - ui). Fit again the model of Question 1, but this time specify family = "quasibinomial" in order to treat phi as a free model parameter to be estimated from the data.**
+
+## Question 5:
+
+**Analyze the model summary and answer the following questions.** 
+
+- What is the baseline category of each categorical predictor in the model? 
+- What are the odds of germination for the baseline combination of Extract and Seeds according to the model? 
+- According to the model, by how much are the odds of germination for extracts of type Cucumber and seed of
+type 0A73 larger or smaller than the odds of germination for the
+baseline combination of Extract and Seeds? 
+- According to the model, by how much are the odds of germination larger/smaller for extracts of type
+Beans when the seed is 0A75 compared to the odds of the baseline
+combination of Extract and Seed? 
+- Finally, by how much are the odds of germination larger/smaller for extracts of type Cucumber when the seed is 0A75 compared to the odds of the baseline combination of Extract and Seed?
+
+## Question 6:
+
+**Load the car_sales.csv dataset. The dataset contains information about the selling price of cars in India. These are the available variables:**
+
+-   **year:** the year in which the car was manufactured (0 corresponds to the year 2000, so for instance we have that -1: 1999, 0: 2000, 1:2001, 2: 2002,...)
+-   **selling_price:** the selling price (in lakhs - i.e., hundreds of thousands of Indian rupees)
+
+-   **km_driven:** the total kilometers that the car has been driven (in 1000s km)
+
+-   **fuel:** the type of fuel used by the car (Diesel, Petrol, or Other)
+
+-   **seller_type:** whether the seller is an individual or a dealer (possible values: Individual, Dealer, Trustmark Dealer)
+
+-   **owner:** whether the last owner of the car was the car's First Owner,Second Owner, Third Owner, or Other
+
+-   **brand:** the brand of the car (e.g., Maruti, Hyundai, Datsun, Honda, ...).
+
+## Question 7:
+
+**Verify that the response variable selling_price is approximately distributed according to a Gamma distribution. To do this, proceed as follows:** 
+
+- Find the MLE of the parameters shape and rate of a Gamma distribution based on the selling prices using the fitdistr function of the MASS package 
+
+- Plot a histogram of selling_price: 
+
+- Add the density of the Gamma distribution fitted to the data: 
+
+- Does it look like selling_price approximately follows according to a Gamma distribution?
+
+## Question 8:
+
+**Fit a Gamma regression of selling_price on all other variables. Use the logarithm as the link function for your Gamma model.**
+
+## Question 9:
+
+**Produce appropriate diagnostic plots for your model and comment on them. Do you see any issues with the model fit? Perform also a deviance goodness of fit test and comment on the result of the test.**
+
+## Question 10:
+
+**In plain English, give an interpretation of the estimates of the following model parameters by inspecting the `$coefficient` attribute from your Gamma regression model in R:**
+
+- (Intercept) 
+
+- year 
+
+- km_driven 
+
+- fuelPetrol 
+
+- seller_typeIndividual 
+
+- ownerSecond Owner 
+
+- brandBMW
+
+**Be sure to pay attention the following:**
+
+- What are the baseline category values for this model? By default, for each categorical variable, R sorts its values alphabetically and takes the first of the sorted values as the baseline category value for that variable. 
+
+- You used the logarithm as the link function for your model. If you do the math, this means that you will have to exponentiate the model parameters to make them interpretable.
+
+- What kind of effect do these exponentiated parameters have on the average selling price according to the model? Additive? Multiplicative? Once again, I recommend that you write out your model on a piece of paper and do the basic math needed to
+understand how to interpret its parameters.
+
+**Now, consider these 2 cars:**
