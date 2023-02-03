@@ -33,9 +33,131 @@ The data in the germ dataset of the GLMsData library contains information experi
 
 **Load the germ data in R and fit a logistic regression model for the proportion of seeds that germinated `Germ` / `Total` onto the predictors `Extract` and `Seeds`. Include the interaction for `Extract` and `Seeds`.**
 
+```{r, message = FALSE}
+library(GLMsData)
+library(statmod)
+library(tidyverse)
+```
+
+```{r}
+data(germ)
+head(germ)
+```
+
+```{r}
+glimpse(germ)
+```
+
+```{r}
+logistc_reg_model <- glm(
+    Germ / Total ~ Extract + Seeds + Extract*Seeds,
+    weights = Total, 
+    family = "binomial",
+    data = germ
+)
+
+logistc_reg_model_summary <- summary(logistc_reg_model)
+logistc_reg_model_summary
+```
+```{r}
+# Coefficients.
+logistc_reg_model$coefficient # Additive effect on log-odds.
+exp(logistc_reg_model$coefficient) # Multiplicative effect on odds.
+```
+
+```{r}
+# Deviance goodness of fit test.
+pchisq(
+    logistc_reg_model_summary$deviance,
+    logistc_reg_model_summary$df.residual,
+    lower.tail = FALSE
+)
+```
+
 ## Question 2:
 
 **Produce appropriate diagnostics plot for this logistic regression model and comment on whether you see any indications that the model may not fit the data well.**
+
+```{r}
+par(mfcol = c(2, 2))
+logistc_reg_model_q_resid <- qresid(logistc_reg_model)
+logistc_reg_model_q_resid_std <- (
+    logistc_reg_model_q_resid / sqrt(1 - hatvalues(logistc_reg_model))
+)
+```
+
+```{r}
+scatter.smooth(
+    logistc_reg_model_q_resid_std ~ asin(sqrt(fitted(logistc_reg_model))),
+    col = "blue",
+    las = 1,
+    ylab = "Standardized quantile residuals",
+    xlab = "Variance-stabilized fitted values",
+    cex.lab = 1.5
+)
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+
+abline(a = 0, b = 0, lty = "dashed")
+```
+
+```{r, message = FALSE}
+scatter.smooth(
+    logistc_reg_model_q_resid_std ~ germ$Extract,
+    col = "blue",
+    las = 1,
+    ylab = "Standardized quantile residuals",
+    xlab = "Extract",
+    cex.lab = 1.5)
+
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+
+
+abline(a = 0, b = 0, lty = "dashed")
+```
+
+```{r, message = FALSE}
+scatter.smooth(
+    logistc_reg_model_q_resid_std ~ germ$Seeds,
+    col = "blue",
+    las = 1,
+    lwd = 2,
+    ylab = "Standardized quantile residuals",
+    xlab = "Seeds",
+    cex.lab = 1.5)
+
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+
+abline(a = 0, b = 0, lty = "dashed")
+```
+
+```{r, message = FALSE}
+scatter.smooth(
+    logistc_reg_model_q_resid_std ~ (germ$Seeds*germ$Extract),
+    col = "blue",
+    las = 1,
+    lwd = 2,
+    ylab = "Standardized quantile residuals",
+    xlab = "Seeds",
+    cex.lab = 1.5)
+
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+
+abline(a = 0, b = 0, lty = "dashed")
+```
+
+```{r}
+# Quantile-quantile plot.
+qqnorm(logistc_reg_model_q_resid_std, las = 1, pch = 19, cex.lab = 1.5)
+qqline(logistc_reg_model_q_resid_std, lty = "dashed")
+
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+```
+
 
 ## Question 3:
 
