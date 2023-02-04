@@ -22,10 +22,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Description
 
-The data in the germ dataset of the GLMsData library contains
-information experiments where the number of seed germinations were
-recorded for two extracts: beans and cucumbers. The dataset contains the
-following columns:
+The data in the germ dataset of the GLMsData library contains information experiments where the number of seed germinations were recorded for two extracts: beans and cucumbers. The dataset contains the following columns:
 
 -   **Germ:** the number of seeds that germinated in a particular experiment.
 -   **Total:** the number of seeds planted in a particular experiment.
@@ -36,37 +33,215 @@ following columns:
 
 **Load the germ data in R and fit a logistic regression model for the proportion of seeds that germinated `Germ` / `Total` onto the predictors `Extract` and `Seeds`. Include the interaction for `Extract` and `Seeds`.**
 
+```{r, message = FALSE}
+library(GLMsData)
+library(statmod)
+library(tidyverse)
+library(ggplot2)
+library(fitdistrplus)
+```
+
+```{r}
+data(germ)
+head(germ)
+```
+
+```{r}
+glimpse(germ)
+```
+
+```{r}
+lr_model <- glm(
+    Germ / Total ~ Extract * Seeds,
+    weights = Total, 
+    family = binomial,
+    data = germ
+)
+```
+
+```{r}
+plot(Germ/Total ~ Extract, data=germ, las = 1, ylim = c(0,1))
+title(main = "Distribution of Extract Variable ")
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+```
+
+```{r}
+plot(Germ/Total ~ Seeds, data=germ, las = 1, ylim = c(0,1))
+title(main = "Distribution of Seeds Variable ")
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+```
+
 ## Question 2:
 
 **Produce appropriate diagnostics plot for this logistic regression model and comment on whether you see any indications that the model may not fit the data well.**
+
+```{r}
+par(mfcol = c(2, 2))
+lr_model_q_resid <- qresid(lr_model)
+lr_model_q_resid_std <- (lr_model_q_resid / sqrt(1 - hatvalues(lr_model))
+)
+```
+
+```{r}
+# Standardized quantile residuals vs. variance-stabilized fitted values.
+scatter.smooth(
+    lr_model_q_resid_std ~ asin(sqrt(fitted(lr_model))),
+    col = "blue",
+    las = 1,
+    lwd = 2,
+    ylab = "Standardized quantile residuals",
+    xlab = "Variance-stabilized fitted values",
+    cex.lab = 1.5
+)
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+title(main = "Standardized quantile residuals vs. variance-stabilized fitted values.")
+abline(a = 0, b = 0, col = "black", lty = "dashed")
+```
+
+```{r, message = FALSE}
+# Standardized quantile residuals vs. the predictor (Extract).
+scatter.smooth(
+    lr_model_q_resid_std ~ germ$Extract,
+    col = "blue",
+    las = 1,
+    lwd = 2,
+    ylab = "Standardized quantile residuals",
+    xlab = "Extract",
+    cex.lab = 1.5)
+
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+title(main = "Standardized quantile residuals vs. the predictor (Extract).")
+abline(a = 0, b = 0,col = "black", lty = "dashed")
+```
+
+```{r, message = FALSE}
+# Standardized quantile residuals vs. the predictor (Seeds).
+scatter.smooth(
+    lr_model_q_resid_std ~ germ$Seeds,
+    col = "blue",
+    las = 1,
+    lwd = 2,
+    ylab = "Standardized quantile residuals",
+    xlab = "Seeds",
+    cex.lab = 1.5)
+
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+title(main = "Standardized quantile residuals vs. the predictor (Seeds).")
+abline(a = 0, b = 0,col = "black", lty = "dashed")
+```
+
+```{r, message = FALSE}
+# Linear predictor part of the model vs. working responses.
+lr_model_work_resp <- (resid(lr_model, 
+                    type = "working") + lr_model$linear.predictor)
+scatter.smooth(
+    lr_model$linear.predictor ~ lr_model_work_resp,
+    col = "blue",
+    las = 1,
+    lwd = 2,
+    ylab = "Linear predictor",
+    xlab = "Working responses",
+    cex.lab = 1.5
+)
+
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+title(main = "Linear predictor part of the model vs. working responses.")
+abline(0, 1,col = "black", lty = "dashed")
+```
+
+```{r}
+# Quantile-quantile plot.
+qqnorm(lr_model_q_resid)
+qqline(lr_model_q_resid, lty = "dashed")
+
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+```
+
+```{r}
+# Infuential observations and outliers.
+model_im <- influence.measures(lr_model)
+summary(model_im)
+```
+
+It seems based on the plots above that the is not fitting the data well. In the Normal Q-Q plots we can notice the heavy tails as well the deviation from normal at the middle of the distribution, which is an indication that the model residuals (after being fitted) does not follow a normal distribution given by the expected random distribution that we would like to see to determine that the model capture the signal/variation of the data. Also it is possible to notice the high quantile residuals when compared with the fitted values.
 
 ## Question 3:
 
 **Evaluate the model by means of the deviance goodness of fit test. Does the result of the test indicate potential problems with the model? Explain.**
 
+```{r}
+# Deviance goodness of fit test.
+lr_summary <- summary(lr_model)
+
+pchisq(lr_summary$deviance,
+       lr_summary$df.residual,
+       lower.tail = FALSE)
+```
+
+This is interesting as the P-value of 1% is telling us that almost with every alpha higher than 1% we can reject the null Hypothesis that the model fits the data properly, which aligns with what we saw in the previous plots.
+
 ## Question 4:
 
 **Sometimes, when the diagnostics of a GLM look overall good but the goodness of fit test indicates potential problems, it is possible that the data exhibit over dispersion (see chapter 9.8 of GLM). This means that the overall variability of the data is larger than what is prescribed by the model. In the case of logistic regression, the variance of the binomial counts Yi \~ Binomial(mi; ui) is expected to be V(Yi) = mi x ui(1 - ui). Fit again the model of Question 1, but this time specify family = "quasibinomial" in order to treat phi as a free model parameter to be estimated from the data.**
 
+```{r}
+lr_model_quasi <- update(lr_model, family = quasibinomial)
+```
+
 ## Question 5:
 
-**Analyze the model summary and answer the following questions.** 
+**Analyze the model summary and answer the following questions.**
 
-- What is the baseline category of each categorical predictor in the model? 
-- What are the odds of germination for the baseline combination of Extract and Seeds according to the model? 
-- According to the model, by how much are the odds of germination for extracts of type Cucumber and seed of
-type 0A73 larger or smaller than the odds of germination for the
-baseline combination of Extract and Seeds? 
-- According to the model, by how much are the odds of germination larger/smaller for extracts of type
-Beans when the seed is 0A75 compared to the odds of the baseline
-combination of Extract and Seed? 
-- Finally, by how much are the odds of germination larger/smaller for extracts of type Cucumber when the seed is 0A75 compared to the odds of the baseline combination of Extract and Seed?
+```{r}
+lr_model_quasi_summary <- summary(lr_model_quasi)
+lr_model_quasi_summary
+```
+
+```{r}
+anova(lr_model_quasi, test = 'F')
+```
+
+-   What is the baseline category of each categorical predictor in the model?
+We can see that the baseline for the model is: `ExtractBeans` & `SeedsOA73`
+
+-   What are the odds of germination for the baseline combination of Extract and Seeds according to the model?
+```{r}
+# Coefficients.
+exp(coef(lr_model)) # Multiplicative effect on odds.
+```
+The baseline odds of germination for the combination Extract: Bean & Seed: OA73 is 0.66. 
+
+-   According to the model, by how much are the odds of germination for extracts of type Cucumber and seed of type 0A73 larger or smaller than the odds of germination for the baseline combination of Extract and Seeds?
+
+
+-   According to the model, by how much are the odds of germination larger/smaller for extracts of type Beans when the seed is 0A75 compared to the odds of the baseline combination of Extract and Seed?
+
+
+-   Finally, by how much are the odds of germination larger/smaller for extracts of type Cucumber when the seed is 0A75 compared to the odds of the baseline combination of Extract and Seed?
+In this case the odds are 2.17 times higher for the combination Cucumber and OA75 compared to the baseline Bean & OA73
 
 ## Question 6:
 
 **Load the car_sales.csv dataset. The dataset contains information about the selling price of cars in India. These are the available variables:**
 
+```{r}
+car_sales <- read.csv("car-sales.csv")
+glimpse(car_sales)
+```
+
+```{r}
+head(car_sales)
+```
+
 -   **year:** the year in which the car was manufactured (0 corresponds to the year 2000, so for instance we have that -1: 1999, 0: 2000, 1:2001, 2: 2002,...)
+
 -   **selling_price:** the selling price (in lakhs - i.e., hundreds of thousands of Indian rupees)
 
 -   **km_driven:** the total kilometers that the car has been driven (in 1000s km)
@@ -81,49 +256,210 @@ combination of Extract and Seed?
 
 ## Question 7:
 
-**Verify that the response variable selling_price is approximately distributed according to a Gamma distribution. To do this, proceed as follows:** 
+**Verify that the response variable selling_price is approximately distributed according to a Gamma distribution. To do this, proceed as follows:**
 
-- Find the MLE of the parameters shape and rate of a Gamma distribution based on the selling prices using the fitdistr function of the MASS package 
+-   Find the MLE (Max Likelihood Estimator) of the parameters shape and rate of a Gamma distribution based on the selling prices using the fitdistr function of the MASS package
 
-- Plot a histogram of selling_price: 
+```{r, message=FALSE}
+gamma_mle <- fitdistr(car_sales$selling_price, 
+                      "gamma", 
+                      start = list(shape = 1, rate = 0.5),
+                      lower = 0.001
+                      )$estimate
 
-- Add the density of the Gamma distribution fitted to the data: 
+```
 
-- Does it look like selling_price approximately follows according to a Gamma distribution?
+-   Plot a histogram of selling_price:
+
+```{r}
+hist(car_sales$selling_price, 
+     breaks = 32, 
+     probability = TRUE, 
+     xlab = "Selling Price")
+```
+
+-   Add the density of the Gamma distribution fitted to the data:
+
+```{r}
+hist(car_sales$selling_price, 
+     breaks = 32, 
+     probability = TRUE, 
+     xlab = "Selling Price")
+
+x_values <- seq(min(car_sales$selling_price), 
+                max(car_sales$selling_price), 
+                length = 500)
+lines(x_values,
+      dgamma(x_values, 
+             shape = gamma_mle[1], 
+             rate = gamma_mle[2]),
+      lwd = 3)
+```
+
+-   Does it look like selling_price approximately follows according to a Gamma distribution?
+It seems that the Gamma distribution with the shape and rate value denoted below is a good fit for the variable `selling_price`
+
+```{r}
+gamma_mle
+```
 
 ## Question 8:
 
 **Fit a Gamma regression of selling_price on all other variables. Use the logarithm as the link function for your Gamma model.**
 
+```{r}
+gamma_model <- glm(selling_price ~ .,
+    family = Gamma(link="log"),
+    data = car_sales)
+```
+
 ## Question 9:
 
 **Produce appropriate diagnostic plots for your model and comment on them. Do you see any issues with the model fit? Perform also a deviance goodness of fit test and comment on the result of the test.**
+
+```{r}
+par(mfcol = c(2, 2))
+gamma_model_q_resid <- qresid(gamma_model)
+gamma_model_q_resid_std <- (gamma_model_q_resid / sqrt(1 - hatvalues(gamma_model))
+)
+```
+
+```{r, message = FALSE}
+# Linear predictor part of the model vs. working responses.
+gamma_model_work_resp <- (resid(gamma_model, 
+                    type = "working") + gamma_model$linear.predictor)
+scatter.smooth(
+    gamma_model$linear.predictor ~ gamma_model_work_resp,
+    col = "blue",
+    las = 1,
+    lwd = 2,
+    ylab = "Linear predictor",
+    xlab = "Working responses",
+    cex.lab = 1.5
+)
+
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+title(main = "Linear predictor part of the model vs. working responses.")
+abline(0, 1,col = "black", lty = "dashed")
+```
+
+```{r}
+# Standardized quantile residuals vs. variance-stabilized fitted values.
+scatter.smooth(
+    gamma_model_q_resid ~ asin(sqrt(fitted(gamma_model))),
+    col = "blue",
+    las = 1,
+    lwd = 2,
+    ylab = "Standardized quantile residuals",
+    xlab = "Variance-stabilized fitted values",
+    cex.lab = 1.5
+)
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+title(main = "Standardized quantile residuals vs. variance-stabilized fitted values.")
+abline(a = 0, b = 0, col = "black", lty = "dashed")
+```
+
+```{r}
+# Quantile-quantile plot.
+qqnorm(gamma_model_q_resid)
+qqline(gamma_model_q_resid, lty = "dashed")
+
+grid(nx = NULL, ny = NULL,
+     lty = 2, col = "gray", lwd = 2)
+```
 
 ## Question 10:
 
 **In plain English, give an interpretation of the estimates of the following model parameters by inspecting the `$coefficient` attribute from your Gamma regression model in R:**
 
-- (Intercept) 
+-   (Intercept)
 
-- year 
+-   year
 
-- km_driven 
+-   km_driven
 
-- fuelPetrol 
+-   fuelPetrol
 
-- seller_typeIndividual 
+-   seller_typeIndividual
 
-- ownerSecond Owner 
+-   ownerSecond Owner
 
-- brandBMW
+-   brandBMW
+
+```{r}
+summary(gamma_model)
+```
+```{r}
+# Coefficients.
+exp(coef(gamma_model)) # Multiplicative effect on odds.
+```
 
 **Be sure to pay attention the following:**
 
-- What are the baseline category values for this model? By default, for each categorical variable, R sorts its values alphabetically and takes the first of the sorted values as the baseline category value for that variable. 
+-   What are the baseline category values for this model? By default, for each categorical variable, R sorts its values alphabetically and takes the first of the sorted values as the baseline category value for that variable.
 
-- You used the logarithm as the link function for your model. If you do the math, this means that you will have to exponentiate the model parameters to make them interpretable.
+-   You used the logarithm as the link function for your model. If you do the math, this means that you will have to exponentiate the model parameters to make them interpretable.
 
-- What kind of effect do these exponentiated parameters have on the average selling price according to the model? Additive? Multiplicative? Once again, I recommend that you write out your model on a piece of paper and do the basic math needed to
-understand how to interpret its parameters.
+-   What kind of effect do these exponentiated parameters have on the average selling price according to the model? Additive? Multiplicative? Once again, I recommend that you write out your model on a piece of paper and do the basic math needed to understand how to interpret its parameters.
 
 **Now, consider these 2 cars:**
+
+**Car 1:**
+
+- year: 2010 
+
+- km_driven: 50000 
+
+- fuel: Diesel 
+
+- seller_type: Individual
+
+- owner: Second Owner 
+
+- brand: Honda
+
+**Car 2:**
+
+- year: 2010 
+
+- km_driven: 50000 
+
+- fuel: Diesel 
+
+- seller_type: Individual 
+
+- owner: First Owner 
+
+- brand: Honda
+
+Compute the difference between the predictions for Car 2 and Car 1 and compare the result to the estimated model parameter `ownerSecond` Owner. Use the R function predict(<your model>, <your prediction data>) to get predictions on the scale of the link function (in this case, the logarithm of lakhs of Indian rupees). Are you surprised by the result of your comparison? Explain.
+
+```{r}
+#First Prediction
+new_obs1 = data.frame(year = 2010, km_driven = 50000, 
+                      fuel = 'Diesel', seller_type = 'Individual', 
+                      owner = 'Second Owner', brand = 'Honda')
+predict1 <- predict(gamma_model, 
+                    new_obs1)
+
+#Second Prediction
+new_obs2 = data.frame(year = 2010, km_driven = 50000, 
+                      fuel = 'Diesel', seller_type = 'Individual', 
+                      owner = 'First Owner', brand = 'Honda')
+predict2 <- predict(gamma_model, 
+                    new_obs2)
+```
+
+This time, use the R function predict(<your model>, <your prediction data>, type = "response") to get predictions for the selling prices of these 2 cars on the original scale of the response variable Y (in this case, lakhs of Indian rupees). Compute the ratio of the predicted selling price of Car 2 and the predicted selling price of Car 1 and compare it with the exponentiated model parameter `ownerSecond` Owner. Are you surprised by the result of your comparison? Explain.
+
+```{r}
+predict1r <- predict(gamma_model, 
+                    new_obs1,
+                    type = "response")
+
+predict2r <- predict(gamma_model, 
+                    new_obs2,
+                    type = "response")
+```
